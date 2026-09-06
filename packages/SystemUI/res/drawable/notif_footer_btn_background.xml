@@ -15,21 +15,20 @@
   ~ limitations under the License.
   -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:androidprv="http://schemas.android.com/apk/prv/res/android"
-    android:color="?android:attr/colorControlHighlight">
+    android:color="#33FFFFFF">
     <item>
         <inset
             android:insetBottom="4dp"
             android:insetTop="4dp">
             <shape android:shape="rectangle">
-                <corners android:radius="20dp" />
+                <corners android:radius="24dp" />
                 <padding
                     android:left="20dp"
                     android:right="20dp" />
-                <!-- TODO(b/294830092): Update to the blur surface effect color token when
-                                        the resource workaround is resolved and
-                                        notification_shade_blur is enabled. -->
-                <solid android:color="@androidprv:color/materialColorSurfaceContainerHigh" />
+                <solid android:color="#D9141824" />
+                <stroke
+                    android:width="1dp"
+                    android:color="#33FFFFFF" />
             </shape>
         </inset>
     </item>

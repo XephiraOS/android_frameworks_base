@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright (C) 2026 XephiraOS Project
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#4DE60026">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="24dp" />
+            <solid android:color="#D9141824" />
+            <stroke
+                android:width="1.2dp"
+                android:color="#33FFFFFF" />
+        </shape>
+    </item>
+</ripple>
