@@ -710,6 +710,16 @@ public class ThemeOverlayController implements CoreStartable, Dumpable {
     }
 
     private void createOverlays(int color) {
+        final boolean chromaBoost = android.provider.Settings.System.getIntForUser(
+                mContext.getContentResolver(),
+                "monet_chroma_boost", 0,
+                android.os.UserHandle.USER_CURRENT) == 1;
+        if (chromaBoost && color != 0) {
+            float[] hsv = new float[3];
+            android.graphics.Color.colorToHSV(color, hsv);
+            hsv[1] = Math.min(1.0f, hsv[1] * 1.5f);
+            color = android.graphics.Color.HSVToColor(android.graphics.Color.alpha(color), hsv);
+        }
         mDarkColorScheme = new ColorScheme(color, true /* isDark */, mThemeStyle, mContrast);
         mLightColorScheme = new ColorScheme(color, false /* isDark */, mThemeStyle, mContrast);
         mColorScheme = isNightMode() ? mDarkColorScheme : mLightColorScheme;
