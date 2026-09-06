@@ -1218,14 +1218,34 @@ public class KeyguardIndicationController {
                     : R.string.keyguard_plugged_in;
         }
 
+        String baseIndication;
         if (hasChargingTime) {
             String chargingTimeFormatted = Formatter.formatShortElapsedTimeRoundingUpToMinutes(
                     mContext, mChargingTimeRemaining);
-            return mContext.getResources().getString(chargingId, chargingTimeFormatted,
+            baseIndication = mContext.getResources().getString(chargingId, chargingTimeFormatted,
                     percentage);
         } else {
-            return mContext.getResources().getString(chargingId, percentage);
+            baseIndication = mContext.getResources().getString(chargingId, percentage);
         }
+
+        final boolean showWattage = android.provider.Settings.System.getIntForUser(
+                mContext.getContentResolver(),
+                "show_charging_wattage", 1,
+                android.os.UserHandle.USER_CURRENT) == 1;
+
+        if (showWattage && mChargingWattage > 0) {
+            int watts = Math.round(mChargingWattage / 1000f);
+            if (watts >= 65) {
+                baseIndication += " (" + watts + "W SUPERVOOC)";
+            } else if (watts >= 30) {
+                baseIndication += " (" + watts + "W Flash Charge)";
+            } else if (watts >= 15) {
+                baseIndication += " (" + watts + "W Fast)";
+            } else if (watts > 0) {
+                baseIndication += " (" + watts + "W)";
+            }
+        }
+        return baseIndication;
     }
 
     public void setStatusBarKeyguardViewManager(
