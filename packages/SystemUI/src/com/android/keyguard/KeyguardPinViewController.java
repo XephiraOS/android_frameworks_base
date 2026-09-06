@@ -111,6 +111,17 @@ public class KeyguardPinViewController
 
     protected void onUserInput() {
         super.onUserInput();
+        boolean customQuickUnlock = android.provider.Settings.Secure.getIntForUser(
+                getContext().getContentResolver(),
+                "lockscreen_quick_unlock_control", 0,
+                mSelectedUserInteractor.getSelectedUserId()) == 1;
+        if (customQuickUnlock) {
+            int len = mPasswordEntry.getText().length();
+            if (len >= 4 && (mPinLength <= 0 || len == mPinLength)) {
+                verifyPasswordAndUnlock();
+                return;
+            }
+        }
         if (isAutoPinConfirmEnabledInSettings()) {
             updateAutoConfirmationState();
             if (mPasswordEntry.getText().length() == mPinLength
@@ -204,6 +215,13 @@ public class KeyguardPinViewController
      * saved on device)
      */
     private boolean isAutoPinConfirmEnabledInSettings() {
+        boolean customQuickUnlock = android.provider.Settings.Secure.getIntForUser(
+                getContext().getContentResolver(),
+                "lockscreen_quick_unlock_control", 0,
+                mSelectedUserInteractor.getSelectedUserId()) == 1;
+        if (customQuickUnlock) {
+            return true;
+        }
         //Checks if user has enabled the auto confirm in Settings
         return mLockPatternUtils.isAutoPinConfirmEnabled(
                 mSelectedUserInteractor.getSelectedUserId())
