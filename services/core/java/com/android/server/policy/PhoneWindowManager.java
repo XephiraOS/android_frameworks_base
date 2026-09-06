@@ -2752,6 +2752,12 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         // Controls rotation and the like.
         initializeHdmiState();
 
+        // Register 3-finger swipe screenshot listener
+        try {
+            mWindowManagerFuncs.registerPointerEventListener(
+                    mThreeFingerScreenshotListener, Display.DEFAULT_DISPLAY);
+        } catch (Exception ignored) {}
+
         // Match current screen state.
         if (!mPowerManager.isInteractive()) {
             startedGoingToSleep(Display.DEFAULT_DISPLAY_GROUP,
@@ -7830,4 +7836,57 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     private void takeScreenshot(int type, int source) {
         mScreenshotHelper.takeScreenshot(type, source, mHandler, null);
     }
+
+    private final WindowManagerPolicyConstants.PointerEventListener mThreeFingerScreenshotListener =
+            new WindowManagerPolicyConstants.PointerEventListener() {
+        private final float[] mStartY = new float[3];
+        private boolean mIsTracking = false;
+        private boolean mTriggered = false;
+
+        @Override
+        public void onPointerEvent(MotionEvent event) {
+            boolean enabled = Settings.System.getIntForUser(mContext.getContentResolver(),
+                    "three_finger_screenshot", 0, UserHandle.USER_CURRENT) == 1;
+            if (!enabled) return;
+
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_POINTER_DOWN:
+                    if (event.getPointerCount() == 3) {
+                        for (int i = 0; i < 3; i++) {
+                            mStartY[i] = event.getY(i);
+                        }
+                        mIsTracking = true;
+                        mTriggered = false;
+                    } else if (event.getPointerCount() > 3) {
+                        mIsTracking = false;
+                    }
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    if (mIsTracking && !mTriggered && event.getPointerCount() == 3) {
+                        float maxDelta = 0;
+                        boolean allDown = true;
+                        for (int i = 0; i < 3; i++) {
+                            float delta = event.getY(i) - mStartY[i];
+                            if (delta < 150) {
+                                allDown = false;
+                            }
+                            if (delta > maxDelta) maxDelta = delta;
+                        }
+                        if (allDown && maxDelta >= 150) {
+                            mTriggered = true;
+                            mIsTracking = false;
+                            mHandler.post(() -> takeScreenshot(
+                                    TAKE_SCREENSHOT_FULLSCREEN,
+                                    SCREENSHOT_KEY_OTHER));
+                        }
+                    }
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                case MotionEvent.ACTION_POINTER_UP:
+                    mIsTracking = false;
+                    break;
+            }
+        }
+    };
 }
