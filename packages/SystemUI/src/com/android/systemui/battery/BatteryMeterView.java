@@ -756,6 +756,27 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         mUnifiedBattery.setColors(mUnifiedBatteryColors);
     }
 
+    /** XephiraOS Custom Battery Style Updater */
+    public void updateBatteryStyle(String style) {
+        if ("hidden".equals(style)) {
+            setVisibility(View.GONE);
+        } else if ("text_only".equals(style)) {
+            mBatteryIconView.setVisibility(View.GONE);
+            setPercentShowMode(MODE_ON);
+            setVisibility(View.VISIBLE);
+        } else {
+            mBatteryIconView.setVisibility(View.VISIBLE);
+            setVisibility(View.VISIBLE);
+            if ("circle".equals(style) || "dotted_circle".equals(style)) {
+                mBatteryIconView.setScaleX(0.9f);
+                mBatteryIconView.setScaleY(0.9f);
+            } else {
+                mBatteryIconView.setScaleX(1.0f);
+                mBatteryIconView.setScaleY(1.0f);
+            }
+        }
+    }
+
     @VisibleForTesting
     boolean isCharging() {
         return mPluggedIn && !mIsIncompatibleCharging;

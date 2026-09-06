@@ -78,6 +78,8 @@ public class BatteryMeterViewController extends ViewController<BatteryMeterView>
                 ArraySet<String> icons = StatusBarIconController.getIconHideList(
                         getContext(), newValue);
                 mView.setVisibility(icons.contains(mSlotBattery) ? View.GONE : View.VISIBLE);
+            } else if ("status_bar_battery_style".equals(key)) {
+                mView.updateBatteryStyle(newValue);
             }
         }
     };
@@ -197,7 +199,7 @@ public class BatteryMeterViewController extends ViewController<BatteryMeterView>
             return;
         }
 
-        mTunerService.addTunable(mTunable, StatusBarIconController.ICON_HIDE_LIST);
+        mTunerService.addTunable(mTunable, StatusBarIconController.ICON_HIDE_LIST, "status_bar_battery_style");
         mIsSubscribedForTunerUpdates = true;
     }
 
