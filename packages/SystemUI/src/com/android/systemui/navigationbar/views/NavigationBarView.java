@@ -666,7 +666,11 @@ public class NavigationBarView extends FrameLayout {
         getBackButton().setVisibility(disableBack       ? View.INVISIBLE : View.VISIBLE);
         getHomeButton().setVisibility(disableHome       ? View.INVISIBLE : View.VISIBLE);
         getRecentsButton().setVisibility(disableRecent  ? View.INVISIBLE : View.VISIBLE);
-        getHomeHandle().setVisibility(disableHomeHandle ? View.INVISIBLE : View.VISIBLE);
+        boolean hidePill = android.provider.Settings.System.getIntForUser(
+                getContext().getContentResolver(),
+                "gesture_nav_hide_pill", 0,
+                android.os.UserHandle.USER_CURRENT) == 1;
+        getHomeHandle().setVisibility((disableHomeHandle || hidePill) ? View.INVISIBLE : View.VISIBLE);
         notifyActiveTouchRegions();
     }
 
@@ -1088,6 +1092,14 @@ public class NavigationBarView extends FrameLayout {
         }
     }
 
+    private final android.database.ContentObserver mHidePillObserver =
+            new android.database.ContentObserver(new android.os.Handler(android.os.Looper.getMainLooper())) {
+        @Override
+        public void onChange(boolean selfChange) {
+            updateStates();
+        }
+    };
+
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
@@ -1098,11 +1110,20 @@ public class NavigationBarView extends FrameLayout {
         }
 
         updateNavButtonIcons();
+
+        try {
+            getContext().getContentResolver().registerContentObserver(
+                    android.provider.Settings.System.getUriFor("gesture_nav_hide_pill"),
+                    false, mHidePillObserver, android.os.UserHandle.USER_ALL);
+        } catch (Exception ignored) {}
     }
 
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
+        try {
+            getContext().getContentResolver().unregisterContentObserver(mHidePillObserver);
+        } catch (Exception ignored) {}
         for (int i = 0; i < mButtonDispatchers.size(); ++i) {
             mButtonDispatchers.valueAt(i).onDestroy();
         }
