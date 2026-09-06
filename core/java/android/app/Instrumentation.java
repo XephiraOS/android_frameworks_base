@@ -1356,6 +1356,7 @@ public class Instrumentation {
     public Application newApplication(ClassLoader cl, String className, Context context)
             throws InstantiationException, IllegalAccessException, 
             ClassNotFoundException {
+        com.android.internal.util.xephira.PixelPropsUtils.setProps(context);
         Application app = getFactory(context.getPackageName())
                 .instantiateApplication(cl, className);
         app.attach(context);
@@ -1375,6 +1376,7 @@ public class Instrumentation {
     static public Application newApplication(Class<?> clazz, Context context)
             throws InstantiationException, IllegalAccessException, 
             ClassNotFoundException {
+        com.android.internal.util.xephira.PixelPropsUtils.setProps(context);
         Application app = (Application)clazz.newInstance();
         app.attach(context);
         return app;
