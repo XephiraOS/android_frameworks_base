@@ -67,6 +67,9 @@ private val KNOWN_PLUGINS =
         "com.android.systemui.clocks.numoverlap" to
             listOf(ClockMetadata("DIGITAL_CLOCK_NUMBEROVERLAP")),
         "com.android.systemui.clocks.weather" to listOf(ClockMetadata("DIGITAL_CLOCK_WEATHER")),
+        "com.android.systemui.clocks.xephira_ios" to listOf(ClockMetadata("XEPHIRA_IOS_DEPTH")),
+        "com.android.systemui.clocks.xephira_red1" to listOf(ClockMetadata("XEPHIRA_ONEPLUS_RED1")),
+        "com.android.systemui.clocks.xephira_aether" to listOf(ClockMetadata("XEPHIRA_AETHER_SPATIAL")),
     )
 private val TRACE_CLOCK_CHANGE = "LOCKSCREEN_CLOCK_CHANGE"
 private val TRACE_STYLE_CHANGE = "LOCKSCREEN_CLOCK_STYLE_CHANGE"

@@ -39,6 +39,9 @@ import com.android.systemui.shared.clocks.FlexClockController.Companion.getDefau
 private val TAG = DefaultClockProvider::class.simpleName
 const val DEFAULT_CLOCK_ID = "DEFAULT"
 const val FLEX_CLOCK_ID = "DIGITAL_CLOCK_FLEX"
+const val XEPHIRA_IOS_DEPTH_CLOCK_ID = "XEPHIRA_IOS_DEPTH"
+const val XEPHIRA_ONEPLUS_RED1_CLOCK_ID = "XEPHIRA_ONEPLUS_RED1"
+const val XEPHIRA_AETHER_SPATIAL_CLOCK_ID = "XEPHIRA_AETHER_SPATIAL"
 
 /** Provides the default system clock */
 class DefaultClockProvider
@@ -57,7 +60,12 @@ constructor(
     }
 
     override fun getClocks(): List<ClockMetadata> {
-        var clocks = listOf(ClockMetadata(DEFAULT_CLOCK_ID))
+        var clocks = listOf(
+            ClockMetadata(DEFAULT_CLOCK_ID),
+            ClockMetadata(XEPHIRA_IOS_DEPTH_CLOCK_ID),
+            ClockMetadata(XEPHIRA_ONEPLUS_RED1_CLOCK_ID),
+            ClockMetadata(XEPHIRA_AETHER_SPATIAL_CLOCK_ID)
+        )
         if (isClockReactiveVariantsEnabled) {
             clocks +=
                 ClockMetadata(
@@ -72,6 +80,19 @@ constructor(
     override fun createClock(ctx: Context, settings: ClockSettings): ClockController {
         if (getClocks().all { it.clockId != settings.clockId }) {
             throw IllegalArgumentException("${settings.clockId} is unsupported by $TAG")
+        }
+
+        if (settings.clockId == XEPHIRA_IOS_DEPTH_CLOCK_ID ||
+            settings.clockId == XEPHIRA_ONEPLUS_RED1_CLOCK_ID ||
+            settings.clockId == XEPHIRA_AETHER_SPATIAL_CLOCK_ID) {
+            return XephiraDepthClockController(
+                ctx,
+                layoutInflater,
+                resources,
+                settings,
+                messageBuffers,
+                settings.clockId ?: XEPHIRA_IOS_DEPTH_CLOCK_ID
+            )
         }
 
         return if (isClockReactiveVariantsEnabled) {
@@ -102,6 +123,25 @@ constructor(
     override fun getClockPickerConfig(settings: ClockSettings): ClockPickerConfig {
         if (getClocks().all { it.clockId != settings.clockId }) {
             throw IllegalArgumentException("${settings.clockId} is unsupported by $TAG")
+        }
+
+        if (settings.clockId == XEPHIRA_IOS_DEPTH_CLOCK_ID ||
+            settings.clockId == XEPHIRA_ONEPLUS_RED1_CLOCK_ID ||
+            settings.clockId == XEPHIRA_AETHER_SPATIAL_CLOCK_ID) {
+            val name = when (settings.clockId) {
+                XEPHIRA_ONEPLUS_RED1_CLOCK_ID -> "OnePlus Crimson 1"
+                XEPHIRA_AETHER_SPATIAL_CLOCK_ID -> "Aether Spatial Glass"
+                else -> "iOS 18 Depth Clock"
+            }
+            return ClockPickerConfig(
+                settings.clockId ?: XEPHIRA_IOS_DEPTH_CLOCK_ID,
+                name,
+                "Xephira flagship spatial depth typography",
+                resources.getDrawable(R.drawable.clock_default_thumbnail, null),
+                isReactiveToTone = true,
+                axes = emptyList(),
+                presetConfig = null,
+            )
         }
 
         if (!isClockReactiveVariantsEnabled) {
