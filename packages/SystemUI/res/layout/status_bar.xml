@@ -139,13 +139,26 @@
             </FrameLayout>
         </FrameLayout>
 
-        <!-- Space should cover the notch (if it exists) and let other views lay out around it -->
-        <android.widget.Space
-            android:id="@+id/cutout_space_view"
-            android:layout_width="0dp"
+        <!-- XephiraOS Dynamic Status Capsule (Island) -->
+        <FrameLayout
+            android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:gravity="center_horizontal|center_vertical"
-        />
+            android:layout_gravity="center_horizontal|center_vertical">
+
+            <!-- Space should cover the notch (if it exists) and let other views lay out around it -->
+            <android.widget.Space
+                android:id="@+id/cutout_space_view"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:gravity="center_horizontal|center_vertical"
+            />
+
+            <com.android.systemui.statusbar.capsule.DynamicCapsuleView
+                android:id="@+id/dynamic_status_capsule"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center" />
+        </FrameLayout>
 
         <!-- Container for the entire end half of the status bar. It will always use the same
              width, independent of the number of visible children and sub-children. -->
