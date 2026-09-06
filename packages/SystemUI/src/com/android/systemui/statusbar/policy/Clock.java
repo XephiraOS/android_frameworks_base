@@ -26,7 +26,9 @@ import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.content.res.TypedArray;
 import android.database.ContentObserver;
+import android.graphics.Color;
 import android.graphics.Rect;
+import android.text.style.ForegroundColorSpan;
 import android.icu.lang.UCharacter;
 import android.icu.text.DateTimePatternGenerator;
 import android.os.Bundle;
@@ -81,12 +83,15 @@ public class Clock extends TextView implements
         DarkReceiver {
 
     public static final String CLOCK_SECONDS = "clock_seconds";
+    public static final String CLOCK_ONEPLUS_RED = "status_bar_clock_oneplus_red";
     private static final String CLOCK_SUPER_PARCELABLE = "clock_super_parcelable";
     private static final String CURRENT_USER_ID = "current_user_id";
     private static final String VISIBLE_BY_POLICY = "visible_by_policy";
     private static final String VISIBLE_BY_USER = "visible_by_user";
     private static final String SHOW_SECONDS = "show_seconds";
     private static final String VISIBILITY = "visibility";
+
+    private boolean mOnePlusRed = false;
 
     private final UserTracker mUserTracker;
     private final CommandQueue mCommandQueue;
@@ -225,7 +230,7 @@ public class Clock extends TextView implements
             mBroadcastDispatcher.registerReceiverWithHandler(mIntentReceiver, filter,
                     Dependency.get(Dependency.TIME_TICK_HANDLER), UserHandle.ALL);
             Dependency.get(TunerService.class).addTunable(this, CLOCK_SECONDS,
-                    StatusBarIconController.ICON_HIDE_LIST);
+                    StatusBarIconController.ICON_HIDE_LIST, CLOCK_ONEPLUS_RED);
             mContext.getContentResolver().registerContentObserver(
                     LineageSettings.System.getUriFor(LineageSettings.System.STATUS_BAR_AM_PM),
                     false, mContentObserver);
@@ -363,6 +368,9 @@ public class Clock extends TextView implements
         if (CLOCK_SECONDS.equals(key)) {
             mShowSeconds = TunerService.parseIntegerSwitch(newValue, false);
             updateShowSeconds();
+        } else if (CLOCK_ONEPLUS_RED.equals(key)) {
+            mOnePlusRed = TunerService.parseIntegerSwitch(newValue, false);
+            updateClock(true);
         } else if (!StatusBarRootModernization.isEnabled()) {
             if (StatusBarIconController.ICON_HIDE_LIST.equals(key)) {
                 setClockVisibleByUser(
@@ -538,12 +546,29 @@ public class Clock extends TextView implements
                     }
                     formatted.delete(magic2, magic2 + 1);
                     formatted.delete(magic1, magic1 + 1);
+                if (mOnePlusRed) {
+                    applyOnePlusRedSpan(formatted);
                 }
                 return formatted;
             }
         }
 
+        if (mOnePlusRed) {
+            SpannableStringBuilder formatted = new SpannableStringBuilder(result);
+            applyOnePlusRedSpan(formatted);
+            return formatted;
+        }
+
         return result;
+    }
+
+    private void applyOnePlusRedSpan(SpannableStringBuilder builder) {
+        String str = builder.toString();
+        int idx = str.indexOf('1');
+        if (idx >= 0) {
+            builder.setSpan(new ForegroundColorSpan(Color.parseColor("#E60026")),
+                    idx, idx + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
 
     }
 
