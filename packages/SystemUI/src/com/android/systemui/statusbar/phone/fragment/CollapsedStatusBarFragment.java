@@ -412,6 +412,15 @@ public class CollapsedStatusBarFragment extends Fragment implements CommandQueue
                 /* systemEventChipAnimateIn */ null,
                 /* systemEventChipAnimateOut */ null,
                 mStatusBarVisibilityChangeListener);
+
+        ImageView xephiraLogo = mStatusBar.findViewById(R.id.xephira_statusbar_logo);
+        if (xephiraLogo != null) {
+            boolean showLogo = android.provider.Settings.System.getIntForUser(
+                    view.getContext().getContentResolver(),
+                    "status_bar_xephira_logo_style", 1,
+                    android.os.UserHandle.USER_CURRENT) == 1;
+            xephiraLogo.setVisibility(showLogo ? View.VISIBLE : View.GONE);
+        }
     }
 
     private String getDumpableName() {
