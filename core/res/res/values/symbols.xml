@@ -6347,4 +6347,8 @@
 
   <!-- Action for opening trusted location settings page -->
   <java-symbol type="string" name="trusted_location_settings_action" />
+
+  <!-- XephiraOS Brand Assets -->
+  <java-symbol type="drawable" name="ic_xephira_logo" />
+  <java-symbol type="drawable" name="ic_xephira_logo_badge" />
 </resources>
