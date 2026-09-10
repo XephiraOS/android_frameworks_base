@@ -53,6 +53,7 @@ import java.util.Locale
 
 /**
  * ClockController powering the iOS 18 Spatial Depth and OnePlus Crimson Red-1 Lockscreen Clocks.
+ * Fully compliant with Android 16 (LineageOS 23.2) ClockController architecture.
  */
 class XephiraDepthClockController(
     private val ctx: Context,
@@ -94,18 +95,21 @@ class XephiraDepthClockController(
 
         override fun onTimeZoneChanged(timeZone: TimeZone) {
             timeFormat.timeZone = timeZone
-            refreshTime()
+            smallClock.events.onTimeTick()
+            largeClock.events.onTimeTick()
         }
 
         override fun onTimeFormatChanged(formatKind: TimeFormatKind) {
             is24HourFormat = formatKind == TimeFormatKind.FULL_DAY
             timeFormat.applyPattern(if (is24HourFormat) "HH:mm" else "hh:mm")
-            refreshTime()
+            smallClock.events.onTimeTick()
+            largeClock.events.onTimeTick()
         }
 
         override fun onLocaleChanged(locale: Locale) {
             timeFormat.setCalendar(Calendar.getInstance(timeFormat.timeZone, locale))
-            refreshTime()
+            smallClock.events.onTimeTick()
+            largeClock.events.onTimeTick()
         }
 
         override fun onAlarmDataChanged(alarmData: AlarmData) {}
@@ -114,7 +118,8 @@ class XephiraDepthClockController(
     }
 
     init {
-        refreshTime()
+        smallClock.events.onTimeTick()
+        largeClock.events.onTimeTick()
     }
 
     override fun initialize(isDarkTheme: Boolean, dozeFraction: Float, foldFraction: Float) {
@@ -142,12 +147,16 @@ class XephiraDepthClockController(
         tv.typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
         tv.letterSpacing = -0.03f
         tv.setTextColor(targetColor)
+        tv.setSingleLine(true)
+        tv.visibility = View.VISIBLE
+        tv.alpha = 1f
         return tv
     }
 
-    private fun refreshTime() {
+    private fun renderFace(face: XephiraClockFaceController) {
         val now = Date()
         val formatted = timeFormat.format(now)
+        val tv = face.view
 
         if (clockVariant == "XEPHIRA_ONEPLUS_RED1") {
             // Style every occurrence of '1' in OnePlus Crimson Red (#E60026)
@@ -163,45 +172,45 @@ class XephiraDepthClockController(
                     )
                 }
             }
-            largeClockView.text = span
-            smallClockView.text = span
+            tv.setTextColor(targetColor)
+            tv.text = span
         } else if (clockVariant == "XEPHIRA_AETHER_SPATIAL") {
-            // Cyan tinted numerals with soft shadow
-            largeClockView.setTextColor(Color.parseColor("#00F2FE"))
-            largeClockView.setShadowLayer(16f, 0f, 4f, Color.parseColor("#6600F2FE"))
-            largeClockView.text = formatted
-            smallClockView.text = formatted
+            // Cyan tinted numerals with soft spatial depth shadow
+            tv.setTextColor(Color.parseColor("#00F2FE"))
+            if (face.isLarge) {
+                tv.setShadowLayer(16f, 0f, 4f, Color.parseColor("#6600F2FE"))
+            } else {
+                tv.setShadowLayer(8f, 0f, 2f, Color.parseColor("#6600F2FE"))
+            }
+            tv.text = formatted
         } else {
             // iOS 18 Bold Depth Clock
-            largeClockView.setTextColor(targetColor)
-            largeClockView.typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
-            largeClockView.text = formatted
-            smallClockView.text = formatted
+            tv.setTextColor(targetColor)
+            tv.typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
+            tv.text = formatted
         }
     }
 
     inner class XephiraClockFaceController(
-        private val clockView: TextView,
-        private val isLarge: Boolean
+        override val view: TextView,
+        val isLarge: Boolean
     ) : ClockFaceController {
-        override val view: View = clockView
         override val config = ClockFaceConfig()
         override var theme: ThemeConfig = ThemeConfig(isDarkTheme = true, settings.seedColor)
         override val layout = DefaultClockFaceLayout(view)
 
         override val events = object : ClockFaceEvents {
             override fun onTimeTick() {
-                refreshTime()
+                renderFace(this@XephiraClockFaceController)
             }
             override fun onThemeChanged(theme: ThemeConfig) {
                 this@XephiraClockFaceController.theme = theme
                 val defaultColor = theme.getDefaultColor(ctx)
                 targetColor = settings.seedColor ?: defaultColor
-                clockView.setTextColor(targetColor)
-                refreshTime()
+                renderFace(this@XephiraClockFaceController)
             }
             override fun onFontSettingChanged(fontSizePx: Float) {
-                clockView.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSizePx)
+                view.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSizePx)
             }
             override fun onTargetRegionChanged(targetRegion: Rect?) {}
             override fun onSecondaryDisplayChanged(onSecondaryDisplay: Boolean) {}
@@ -210,11 +219,13 @@ class XephiraDepthClockController(
         override var animations: ClockAnimations = object : ClockAnimations {
             override fun enter() {}
             override fun doze(fraction: Float) {
-                clockView.alpha = 1.0f - (fraction * 0.4f)
+                view.alpha = 1.0f - (fraction * 0.4f)
             }
             override fun fold(fraction: Float) {}
             override fun charge() {}
-            override fun onPickerCarouselSwiping(swipingFraction: Float) {}
+            override fun onPickerCarouselSwiping(swipingFraction: Float) {
+                view.translationY = 0.5f * view.bottom * (1 - swipingFraction)
+            }
             override fun onPositionAnimated(args: ClockPositionAnimationArgs) {}
             override fun onFidgetTap(x: Float, y: Float) {}
             override fun onFontAxesChanged(style: ClockAxisStyle) {}
