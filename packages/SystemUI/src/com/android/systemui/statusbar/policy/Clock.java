@@ -546,6 +546,7 @@ public class Clock extends TextView implements
                     }
                     formatted.delete(magic2, magic2 + 1);
                     formatted.delete(magic1, magic1 + 1);
+                }
                 if (mOnePlusRed) {
                     applyOnePlusRedSpan(formatted);
                 }
