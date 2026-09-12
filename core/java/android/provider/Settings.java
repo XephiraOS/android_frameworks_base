@@ -4294,6 +4294,12 @@ public final class Settings {
                 CALL_METHOD_DELETE_SYSTEM,
                 sProviderHolder,
                 System.class);
+        /**
+ * Stores the package/component names of tasks locked in recents.
+ *
+ * @hide
+ */
+public static final String RECENTS_LOCKED_TASKS = "recents_locked_tasks";
 
         @UnsupportedAppUsage
         private static final HashSet<String> MOVED_TO_SECURE;
