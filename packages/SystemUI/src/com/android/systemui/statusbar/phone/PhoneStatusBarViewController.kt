@@ -336,6 +336,19 @@ private constructor(
                 dispatchEventToShadeDisplayPolicy(event)
             }
 
+            // Dual-side split status bar pull down:
+            // Left half (x < 50%) opens Quick Settings Control Center; Right half opens Notification Shade.
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                initialTouchX = event.x
+                initialTouchY = event.y
+            } else if (event.action == MotionEvent.ACTION_MOVE) {
+                val dy = event.y - initialTouchY
+                if (dy > touchSlop && initialTouchX < (mView.width * 0.5f)) {
+                    shadeController.animateExpandQs()
+                    return true
+                }
+            }
+
             // Let ShadeViewController intercept touch events when flexiglass is disabled.
             if (!SceneContainerFlag.isEnabled) {
                 return shadeViewController.handleExternalInterceptTouch(event)
@@ -345,8 +358,6 @@ private constructor(
                 MotionEvent.ACTION_DOWN -> {
                     isIntercepting = false
                     clearCachedEvents()
-                    initialTouchX = event.x
-                    initialTouchY = event.y
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dy = event.y - initialTouchY

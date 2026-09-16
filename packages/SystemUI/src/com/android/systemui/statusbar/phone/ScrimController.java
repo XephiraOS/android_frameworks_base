@@ -216,9 +216,9 @@ public class ScrimController implements ViewTreeObserver.OnPreDrawListener, Dump
 
     /**
      * The default scrim under the shade and dialogs.
-     * This should not be lower than 0.54, otherwise we won't pass GAR.
+     * Tuned for Kyant0 Liquid Glass backdrop transmission.
      */
-    public static final float BUSY_SCRIM_ALPHA = 1f;
+    public static final float BUSY_SCRIM_ALPHA = 0.72f;
 
     static final int TAG_KEY_ANIM = R.id.scrim;
     private static final int TAG_START_ALPHA = R.id.scrim_alpha_start;
