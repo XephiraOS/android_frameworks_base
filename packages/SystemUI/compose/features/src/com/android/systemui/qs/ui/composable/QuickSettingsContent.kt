@@ -48,50 +48,7 @@ fun ContentScope.QuickSettingsContent(
     viewModel: QuickSettingsContainerViewModel,
     mediaInRow: Boolean,
 ) {
-    QuickSettingsPanelLayout(
-        brightness =
-            @Composable {
-                if (viewModel.isBrightnessSliderVisible) {
-                    BrightnessSliderContainer(
-                        viewModel.brightnessSliderViewModel,
-                        containerColors =
-                            ContainerColors(
-                                Color.Transparent,
-                                ContainerColors.defaultContainerColor,
-                            ),
-                        modifier =
-                            Modifier.padding(
-                                vertical = dimensionResource(id = R.dimen.qs_brightness_margin_top)
-                            ),
-                    )
-                }
-            },
-        tiles =
-            @Composable {
-                var listening by remember { mutableStateOf(false) }
-                LifecycleStartEffect(Unit) {
-                    listening = true
-
-                    onStopOrDispose { listening = false }
-                }
-
-                Box {
-                    GridAnchor()
-                    TileGrid(viewModel.tileGridViewModel, listening = { listening })
-                }
-            },
-        media =
-            @Composable {
-                Element(key = Media.Elements.mediaCarousel, modifier = Modifier) {
-                    Media(
-                        viewModelFactory = viewModel.mediaViewModelFactory,
-                        presentationStyle = MediaPresentationStyle.Default,
-                        behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
-                        onDismissed = viewModel::onMediaSwipeToDismiss,
-                    )
-                }
-            },
-        mediaInRow = mediaInRow,
+    XephiraControlCenter(
         modifier =
             Modifier.element(Elements.QuickSettingsContent)
                 .padding(horizontal = dimensionResource(id = R.dimen.qs_horizontal_margin))

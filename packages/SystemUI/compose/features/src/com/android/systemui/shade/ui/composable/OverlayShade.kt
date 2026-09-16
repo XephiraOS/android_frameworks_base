@@ -18,8 +18,11 @@ package com.android.systemui.shade.ui.composable
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -157,10 +160,21 @@ private fun ContentScope.Panel(
     header: (@Composable () -> Unit)?,
     content: @Composable () -> Unit,
 ) {
+    val panelShape = RoundedCornerShape(spec.radius)
     Box(
         modifier =
             modifier
                 .disableSwipesWhenScrolling()
+                .border(
+                    width = 1.2.dp,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0x55FFFFFF),
+                            Color(0x12FFFFFF)
+                        )
+                    ),
+                    shape = panelShape
+                )
                 .verticalExpandContainerBackground(Colors.panelBackground(enableTransparency), spec)
     ) {
         Column {

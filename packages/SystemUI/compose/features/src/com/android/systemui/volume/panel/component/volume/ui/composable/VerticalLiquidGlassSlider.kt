@@ -93,8 +93,24 @@ fun VerticalLiquidGlassSlider(
         label = "vertical_drag_tilt"
     )
 
+    val pressScale by animateFloatAsState(
+        targetValue = if (isDragging) 0.96f else 1.0f,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 600f),
+        label = "vertical_press_scale"
+    )
+
+    val hudAlpha by animateFloatAsState(
+        targetValue = if (isDragging) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 700f),
+        label = "hud_alpha"
+    )
+
     Box(
         modifier = modifier
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
             .width(82.dp)
             .height(200.dp)
             .pureLiquidGlass(
@@ -150,7 +166,7 @@ fun VerticalLiquidGlassSlider(
                     moveTo(0f, size.height)
                     lineTo(size.width, size.height)
                     lineTo(size.width, waterLevel)
-                    // Curved fluid meniscus surface
+                    // Dynamic curved fluid meniscus surface
                     quadraticBezierTo(
                         size.width / 2f,
                         waterLevel - dragTilt,
@@ -165,8 +181,8 @@ fun VerticalLiquidGlassSlider(
                     path = fillPath,
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            primaryColor.copy(alpha = if (isDark) 0.85f else 0.90f),
-                            primaryColor.copy(alpha = if (isDark) 0.40f else 0.50f)
+                            primaryColor.copy(alpha = if (isDark) 0.88f else 0.92f),
+                            primaryColor.copy(alpha = if (isDark) 0.42f else 0.52f)
                         ),
                         startY = waterLevel,
                         endY = size.height
@@ -185,9 +201,24 @@ fun VerticalLiquidGlassSlider(
                 }
                 drawPath(
                     path = meniscusPath,
-                    color = Color.White.copy(alpha = 0.90f),
+                    color = Color.White.copy(alpha = 0.92f),
                     style = Stroke(width = 2.5f)
                 )
+
+                // Rising fluid micro-bubbles inside cylinder
+                val bubbleCount = 3
+                for (b in 0 until bubbleCount) {
+                    val bubbleOffsetFraction = ((b * 0.33f) + (animatedNormalized * 1.5f)) % 1f
+                    val bx = size.width * (0.3f + b * 0.2f)
+                    val by = size.height - (fillHeight * bubbleOffsetFraction)
+                    if (by > waterLevel + 6f && by < size.height - 10f) {
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.45f),
+                            radius = 2.5f + b * 1f,
+                            center = Offset(bx, by)
+                        )
+                    }
+                }
             }
         }
 
@@ -198,7 +229,7 @@ fun VerticalLiquidGlassSlider(
                 .padding(vertical = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val pct = (normalized * 100f).toInt()
+            val pct = (animatedNormalized * 100f).toInt()
             Text(
                 text = "$pct%",
                 fontSize = 12.sp,
@@ -214,6 +245,35 @@ fun VerticalLiquidGlassSlider(
                     contentDescription = null,
                     tint = if (isDark) Color.White else Color(0xFF0F172A),
                     modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
+        // ─── 3. ACTIVE DRAGGING FLOATING PERCENTAGE HUD ─────────────────────
+        if (hudAlpha > 0.01f) {
+            val pct = (animatedNormalized * 100f).toInt()
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 10.dp)
+                    .graphicsLayer {
+                        alpha = hudAlpha
+                        scaleX = 0.85f + 0.15f * hudAlpha
+                        scaleY = 0.85f + 0.15f * hudAlpha
+                    }
+                    .pureLiquidGlass(
+                        shape = RoundedCornerShape(12.dp),
+                        cornerRadius = 12.dp,
+                        refraction = 8f,
+                        isDark = isDark
+                    )
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "$pct%",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = primaryColor
                 )
             }
         }

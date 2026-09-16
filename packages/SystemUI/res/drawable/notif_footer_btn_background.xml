@@ -30,6 +30,7 @@
                                         the resource workaround is resolved and
                                         notification_shade_blur is enabled. -->
                 <solid android:color="@androidprv:color/materialColorSurfaceContainerHigh" />
+                <stroke android:width="1.2dp" android:color="#35FFFFFF" />
             </shape>
         </inset>
     </item>

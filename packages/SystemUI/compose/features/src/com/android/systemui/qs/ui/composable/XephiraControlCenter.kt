@@ -18,14 +18,21 @@ package com.android.systemui.qs.ui.composable
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,17 +49,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.FlashlightOn
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.HotspotStation
 import androidx.compose.material.icons.filled.Nightlight
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.outlined.AirplanemodeActive
 import androidx.compose.material.icons.outlined.Bluetooth
@@ -68,12 +78,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -82,15 +95,17 @@ import com.android.compose.modifiers.pureLiquidGlass
 import com.android.systemui.volume.panel.component.volume.ui.composable.VerticalLiquidGlassSlider
 
 /**
- * Next-Gen Modular Liquid Glass Control Center (Android 17 / iOS 26 Inspired).
- * Features a Bento Grid layout with Connectivity Hub, Media Player,
- * Dual Vertical Liquid Sliders, and Circular Glass Quick Toggles.
+ * Next-Gen Flagship Modular Liquid Glass Control Center (Android 17 / iOS 26 Inspired).
+ *
+ * Implements high-fluidity spring physics, dynamic radial glow blooms,
+ * tactile haptic micro-ticks, dual vertical liquid cylinders, and interactive Bento grid modules.
  */
 @Composable
 fun XephiraControlCenter(
     modifier: Modifier = Modifier,
     isDark: Boolean = isSystemInDarkTheme(),
-    onOpenSettings: (() -> Unit)? = null
+    onOpenSettings: (() -> Unit)? = null,
+    onSwitchToNotifications: (() -> Unit)? = null
 ) {
     val view = LocalView.current
 
@@ -102,59 +117,119 @@ fun XephiraControlCenter(
     var bluetoothActive by remember { mutableStateOf(true) }
     var airplaneActive by remember { mutableStateOf(false) }
 
+    var isPlaying by remember { mutableStateOf(true) }
+    var mediaProgress by remember { mutableFloatStateOf(0.46f) }
+
     var flashlightActive by remember { mutableStateOf(false) }
     var dndActive by remember { mutableStateOf(false) }
     var rotateActive by remember { mutableStateOf(true) }
     var hotspotActive by remember { mutableStateOf(false) }
+    var darkModeActive by remember { mutableStateOf(isDark) }
+    var recordActive by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // ─── 1. TOP HEADER & QUICK GLANCE BAR ──────────────────────────────
+        // ─── 1. TOP DUAL-SEGMENT PILL SWITCHER & QUICK STATUS ───────────────
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = "Control Center",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isDark) Color.White else Color(0xFF0F172A),
-                    letterSpacing = (-0.3).sp
-                )
-                Text(
-                    text = "XephiraOS 1.0",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = if (isDark) Color(0x99FFFFFF) else Color(0xFF64748B)
-                )
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = CircleShape,
-                    color = if (isDark) Color(0x22FFFFFF) else Color(0x14000000),
+            // Segment Pill Switcher
+            Row(
+                modifier = Modifier
+                    .pureLiquidGlass(
+                        shape = RoundedCornerShape(20.dp),
+                        cornerRadius = 20.dp,
+                        refraction = 10f,
+                        isDark = isDark
+                    )
+                    .padding(3.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Control Center Active Pill
+                Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            if (isDark) Color(0x35FFFFFF) else Color(0xFF0F172A)
+                        )
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "Control Center",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+
+                // Notifications Switcher Pill
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                            onOpenSettings?.invoke()
+                            onSwitchToNotifications?.invoke()
                         }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = "Settings",
-                            tint = if (isDark) Color.White else Color(0xFF0F172A),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    Text(
+                        text = "Notifications",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (isDark) Color(0x99FFFFFF) else Color(0xFF64748B)
+                    )
                 }
+            }
+
+            // Status Bar Glance Pills (Battery + Settings)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Frosted Battery Pill
+                Row(
+                    modifier = Modifier
+                        .pureLiquidGlass(
+                            shape = RoundedCornerShape(14.dp),
+                            cornerRadius = 14.dp,
+                            refraction = 8f,
+                            isDark = isDark
+                        )
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(16.dp)
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(Color(0xFF10B981))
+                    )
+                    Text(
+                        text = "88%",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDark) Color.White else Color(0xFF0F172A)
+                    )
+                }
+
+                // Settings Button
+                LiquidIconButton(
+                    icon = Icons.Filled.Settings,
+                    contentDescription = "Settings",
+                    isDark = isDark,
+                    onClick = {
+                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                        onOpenSettings?.invoke()
+                    }
+                )
             }
         }
 
@@ -167,7 +242,7 @@ fun XephiraControlCenter(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(168.dp)
+                    .height(172.dp)
                     .pureLiquidGlass(
                         shape = RoundedCornerShape(26.dp),
                         cornerRadius = 26.dp,
@@ -187,6 +262,7 @@ fun XephiraControlCenter(
                         BentoToggleIcon(
                             icon = Icons.Filled.Wifi,
                             label = "Wi-Fi",
+                            subLabel = if (wifiActive) "Xephira_5G" else "Off",
                             isActive = wifiActive,
                             activeColor = Color(0xFF0EA5E9),
                             isDark = isDark,
@@ -198,6 +274,7 @@ fun XephiraControlCenter(
                         BentoToggleIcon(
                             icon = Icons.Outlined.CellTower,
                             label = "5G Data",
+                            subLabel = if (dataActive) "LTE+" else "Off",
                             isActive = dataActive,
                             activeColor = Color(0xFF10B981),
                             isDark = isDark,
@@ -215,6 +292,7 @@ fun XephiraControlCenter(
                         BentoToggleIcon(
                             icon = Icons.Outlined.Bluetooth,
                             label = "Bluetooth",
+                            subLabel = if (bluetoothActive) "Connected" else "Off",
                             isActive = bluetoothActive,
                             activeColor = Color(0xFF8B5CF6),
                             isDark = isDark,
@@ -226,6 +304,7 @@ fun XephiraControlCenter(
                         BentoToggleIcon(
                             icon = Icons.Outlined.AirplanemodeActive,
                             label = "Airplane",
+                            subLabel = if (airplaneActive) "Active" else "Off",
                             isActive = airplaneActive,
                             activeColor = Color(0xFFF59E0B),
                             isDark = isDark,
@@ -242,7 +321,7 @@ fun XephiraControlCenter(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(168.dp)
+                    .height(172.dp)
                     .pureLiquidGlass(
                         shape = RoundedCornerShape(26.dp),
                         cornerRadius = 26.dp,
@@ -255,6 +334,7 @@ fun XephiraControlCenter(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
+                    // Title & Album Art Thumbnail
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -263,7 +343,7 @@ fun XephiraControlCenter(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Midnight Echo",
-                                fontSize = 14.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isDark) Color.White else Color(0xFF0F172A),
                                 maxLines = 1
@@ -280,6 +360,7 @@ fun XephiraControlCenter(
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = Color(0xFF8B5CF6).copy(alpha = 0.35f),
+                            border = BorderStroke(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.6f)),
                             modifier = Modifier.size(34.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
@@ -294,7 +375,41 @@ fun XephiraControlCenter(
                     }
 
                     // Live Soundwave Equalizer Visualizer
-                    BentoMiniWaveform(isDark = isDark)
+                    BentoMiniWaveform(isPlaying = isPlaying, isDark = isDark)
+
+                    // Timeline Scrubber Bar
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(if (isDark) Color(0x22FFFFFF) else Color(0x14000000))
+                                .clickable {
+                                    mediaProgress = (mediaProgress + 0.15f) % 1f
+                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(mediaProgress)
+                                    .height(4.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            listOf(Color(0xFF38BDF8), Color(0xFF8B5CF6))
+                                        )
+                                    )
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(text = "1:42", fontSize = 9.sp, color = if (isDark) Color(0x66FFFFFF) else Color(0xFF94A3B8))
+                            Text(text = "3:30", fontSize = 9.sp, color = if (isDark) Color(0x66FFFFFF) else Color(0xFF94A3B8))
+                        }
+                    }
 
                     // Playback Controls
                     Row(
@@ -302,31 +417,41 @@ fun XephiraControlCenter(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.FastRewind,
-                            contentDescription = "Previous",
+                        LiquidPressableIcon(
+                            icon = Icons.Filled.FastRewind,
+                            onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                            },
                             tint = if (isDark) Color.White else Color(0xFF0F172A),
-                            modifier = Modifier.size(20.dp)
+                            size = 20.dp
                         )
+                        // Play/Pause Morphing Button
                         Surface(
                             shape = CircleShape,
                             color = if (isDark) Color.White else Color(0xFF0F172A),
-                            modifier = Modifier.size(34.dp)
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clickable {
+                                    isPlaying = !isPlaying
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                                }
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    imageVector = Icons.Filled.PlayArrow,
-                                    contentDescription = "Play",
+                                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                    contentDescription = if (isPlaying) "Pause" else "Play",
                                     tint = if (isDark) Color(0xFF0F172A) else Color.White,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
-                        Icon(
-                            imageVector = Icons.Filled.FastForward,
-                            contentDescription = "Next",
+                        LiquidPressableIcon(
+                            icon = Icons.Filled.FastForward,
+                            onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                            },
                             tint = if (isDark) Color.White else Color(0xFF0F172A),
-                            modifier = Modifier.size(20.dp)
+                            size = 20.dp
                         )
                     }
                 }
@@ -361,7 +486,7 @@ fun XephiraControlCenter(
             }
         }
 
-        // ─── 4. BENTO ROW 3: QUICK TOGGLE ACTION MATRIX ────────────────────
+        // ─── 4. BENTO ROW 3: CIRCULAR QUICK TOGGLES (6-ITEM MATRIX) ────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -371,7 +496,7 @@ fun XephiraControlCenter(
                     refraction = 14f,
                     isDark = isDark
                 )
-                .padding(16.dp)
+                .padding(14.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -404,7 +529,7 @@ fun XephiraControlCenter(
 
                 CircularQuickToggle(
                     icon = Icons.Filled.ScreenRotation,
-                    label = "Auto-Rotate",
+                    label = "Rotate",
                     isActive = rotateActive,
                     glowColor = Color(0xFF06B6D4), // Cyan
                     isDark = isDark,
@@ -427,47 +552,135 @@ fun XephiraControlCenter(
                 )
 
                 CircularQuickToggle(
+                    icon = Icons.Filled.DarkMode,
+                    label = "Theme",
+                    isActive = darkModeActive,
+                    glowColor = Color(0xFF6366F1), // Indigo
+                    isDark = isDark,
+                    onClick = {
+                        darkModeActive = !darkModeActive
+                        view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                    }
+                )
+
+                CircularQuickToggle(
                     icon = Icons.Filled.Videocam,
                     label = "Record",
-                    isActive = false,
+                    isActive = recordActive,
                     glowColor = Color(0xFFEF4444), // Crimson
                     isDark = isDark,
                     onClick = {
+                        recordActive = !recordActive
                         view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                     }
                 )
             }
         }
-    }
-}
 
-@Composable
-private fun BentoToggleIcon(
-    icon: ImageVector,
-    label: String,
-    isActive: Boolean,
-    activeColor: Color,
-    isDark: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        shape = CircleShape,
-        color = if (isActive) activeColor else (if (isDark) Color(0x22FFFFFF) else Color(0x14000000)),
-        modifier = Modifier
-            .size(52.dp)
-            .clickable { onClick() }
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = if (isActive) Color.White else (if (isDark) Color.White else Color(0xFF0F172A)),
-                modifier = Modifier.size(22.dp)
+        // ─── 5. BOTTOM FROSTED DRAG HANDLE ─────────────────────────────────
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(44.dp)
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(if (isDark) Color(0x40FFFFFF) else Color(0x30000000))
             )
         }
     }
 }
 
+/**
+ * Bento Toggle Icon with tactile spring press physics and radial glow aura.
+ */
+@Composable
+private fun BentoToggleIcon(
+    icon: ImageVector,
+    label: String,
+    subLabel: String = "",
+    isActive: Boolean,
+    activeColor: Color,
+    isDark: Boolean,
+    onClick: () -> Unit
+) {
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.93f else 1.0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "bento_press"
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(52.dp)
+        ) {
+            // Dynamic Radial Glow Bloom
+            if (isActive) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(activeColor.copy(alpha = 0.5f), Color.Transparent)
+                            )
+                        )
+                )
+            }
+
+            Surface(
+                shape = CircleShape,
+                color = if (isActive) activeColor else (if (isDark) Color(0x22FFFFFF) else Color(0x14000000)),
+                border = if (isActive) BorderStroke(1.2.dp, Color.White.copy(alpha = 0.7f)) else null,
+                modifier = Modifier
+                    .size(50.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onPress = {
+                                isPressed = true
+                                tryAwaitRelease()
+                                isPressed = false
+                            },
+                            onTap = { onClick() }
+                        )
+                    }
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = label,
+                        tint = if (isActive) Color.White else (if (isDark) Color.White else Color(0xFF0F172A)),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+        }
+
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (isDark) Color.White else Color(0xFF0F172A)
+        )
+    }
+}
+
+/**
+ * Circular Quick Toggle with tactile spring scaling, glowing stroke, and label.
+ */
 @Composable
 private fun CircularQuickToggle(
     icon: ImageVector,
@@ -477,45 +690,141 @@ private fun CircularQuickToggle(
     isDark: Boolean,
     onClick: () -> Unit
 ) {
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.92f else 1.0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "quick_press"
+    )
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
     ) {
         Surface(
             shape = CircleShape,
             color = if (isActive) glowColor.copy(alpha = 0.28f) else (if (isDark) Color(0x20FFFFFF) else Color(0x12000000)),
-            border = if (isActive) androidx.compose.foundation.BorderStroke(1.8.dp, glowColor) else null,
+            border = if (isActive) BorderStroke(1.8.dp, glowColor) else BorderStroke(1.dp, if (isDark) Color(0x25FFFFFF) else Color(0x10000000)),
             modifier = Modifier
-                .size(50.dp)
-                .clickable { onClick() }
+                .size(46.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onPress = {
+                            isPressed = true
+                            tryAwaitRelease()
+                            isPressed = false
+                        },
+                        onTap = { onClick() }
+                    )
+                }
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = icon,
                     contentDescription = label,
                     tint = if (isActive) glowColor else (if (isDark) Color.White else Color(0xFF0F172A)),
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
 
         Text(
             text = label,
-            fontSize = 10.sp,
+            fontSize = 9.sp,
             fontWeight = FontWeight.Medium,
             color = if (isDark) Color(0xB3FFFFFF) else Color(0xFF64748B)
         )
     }
 }
 
+/**
+ * Interactive pressable icon with spring bounce.
+ */
 @Composable
-private fun BentoMiniWaveform(isDark: Boolean) {
+private fun LiquidPressableIcon(
+    icon: ImageVector,
+    onClick: () -> Unit,
+    tint: Color,
+    size: androidx.compose.ui.unit.Dp
+) {
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.85f else 1.0f,
+        animationSpec = spring(dampingRatio = 0.5f, stiffness = 800f),
+        label = "icon_press"
+    )
+
+    Box(
+        modifier = Modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        isPressed = true
+                        tryAwaitRelease()
+                        isPressed = false
+                    },
+                    onTap = { onClick() }
+                )
+            }
+            .padding(6.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(size)
+        )
+    }
+}
+
+/**
+ * Top icon button with liquid glass styling.
+ */
+@Composable
+private fun LiquidIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    isDark: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = CircleShape,
+        color = if (isDark) Color(0x22FFFFFF) else Color(0x14000000),
+        border = BorderStroke(1.dp, if (isDark) Color(0x35FFFFFF) else Color(0x15000000)),
+        modifier = Modifier
+            .size(34.dp)
+            .clickable { onClick() }
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = if (isDark) Color.White else Color(0xFF0F172A),
+                modifier = Modifier.size(17.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Live soundwave visualizer that pauses when playback is paused.
+ */
+@Composable
+private fun BentoMiniWaveform(isPlaying: Boolean, isDark: Boolean) {
     val transition = rememberInfiniteTransition(label = "bento_waveform")
     val phase by transition.animateFloat(
         initialValue = 0f,
         targetValue = 6.28f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
+            animation = tween(1600, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "phase"
@@ -531,8 +840,8 @@ private fun BentoMiniWaveform(isDark: Boolean) {
         val barWidth = 3.5f
 
         for (i in 0 until barCount) {
-            val sinVal = Math.sin((i.toDouble() * 0.45) + phase).toFloat()
-            val barHeight = ((sinVal + 1f) * 0.5f * size.height * 0.85f).coerceAtLeast(4f)
+            val baseSin = if (isPlaying) Math.sin((i.toDouble() * 0.45) + phase).toFloat() else 0.2f
+            val barHeight = ((baseSin + 1f) * 0.5f * size.height * 0.85f).coerceAtLeast(4f)
             val x = i * spacing + (spacing - barWidth) / 2f
             val y = (size.height - barHeight) / 2f
 

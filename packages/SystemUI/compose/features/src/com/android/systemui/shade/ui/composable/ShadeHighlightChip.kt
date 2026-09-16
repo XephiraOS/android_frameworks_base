@@ -17,6 +17,7 @@
 package com.android.systemui.shade.ui.composable
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.android.compose.modifiers.clickableWithoutFocus
@@ -104,6 +106,13 @@ fun ShadeHighlightChip(
             modifier
                 .clip(RoundedCornerShape(25.dp))
                 .clickableWithoutFocus(onClick)
+                .border(
+                    width = 1.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(Color(0x45FFFFFF), Color(0x15FFFFFF))
+                    ),
+                    shape = RoundedCornerShape(25.dp)
+                )
                 .thenIf(backgroundColor != Color.Unspecified) {
                     Modifier.background(
                             if (isHovered) {
