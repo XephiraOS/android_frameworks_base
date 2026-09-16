@@ -54,7 +54,6 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.FlashlightOn
 import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.HotspotStation
 import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -62,7 +61,6 @@ import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.outlined.AirplanemodeActive
 import androidx.compose.material.icons.outlined.Bluetooth
@@ -84,6 +82,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -540,7 +539,6 @@ fun XephiraControlCenter(
                 )
 
                 CircularQuickToggle(
-                    icon = Icons.Filled.HotspotStation,
                     label = "Hotspot",
                     isActive = hotspotActive,
                     glowColor = Color(0xFF10B981), // Emerald
@@ -548,6 +546,38 @@ fun XephiraControlCenter(
                     onClick = {
                         hotspotActive = !hotspotActive
                         view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                    },
+                    customIcon = {
+                        Canvas(modifier = Modifier.size(20.dp)) {
+                            val tint = if (hotspotActive) Color(0xFF10B981) else (if (isDark) Color.White else Color(0xFF0F172A))
+                            val c = Offset(size.width / 2f, size.height * 0.72f)
+                            // Central beacon dot
+                            drawCircle(
+                                color = tint,
+                                radius = 2.4f,
+                                center = c
+                            )
+                            // Inner signal wave
+                            drawArc(
+                                color = tint,
+                                startAngle = 210f,
+                                sweepAngle = 120f,
+                                useCenter = false,
+                                topLeft = Offset(c.x - 5.5f, c.y - 5.5f),
+                                size = Size(11f, 11f),
+                                style = Stroke(width = 1.6f)
+                            )
+                            // Outer signal wave
+                            drawArc(
+                                color = tint,
+                                startAngle = 205f,
+                                sweepAngle = 130f,
+                                useCenter = false,
+                                topLeft = Offset(c.x - 9.5f, c.y - 9.5f),
+                                size = Size(19f, 19f),
+                                style = Stroke(width = 1.6f)
+                            )
+                        }
                     }
                 )
 
@@ -683,12 +713,13 @@ private fun BentoToggleIcon(
  */
 @Composable
 private fun CircularQuickToggle(
-    icon: ImageVector,
     label: String,
     isActive: Boolean,
     glowColor: Color,
     isDark: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    icon: ImageVector? = null,
+    customIcon: (@Composable () -> Unit)? = null
 ) {
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
@@ -723,12 +754,16 @@ private fun CircularQuickToggle(
                 }
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = if (isActive) glowColor else (if (isDark) Color.White else Color(0xFF0F172A)),
-                    modifier = Modifier.size(20.dp)
-                )
+                if (customIcon != null) {
+                    customIcon()
+                } else if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = label,
+                        tint = if (isActive) glowColor else (if (isDark) Color.White else Color(0xFF0F172A)),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
 
