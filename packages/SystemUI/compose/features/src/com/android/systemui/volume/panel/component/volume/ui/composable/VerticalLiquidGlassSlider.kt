@@ -72,7 +72,9 @@ fun VerticalLiquidGlassSlider(
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     icon: ImageVector? = null,
     primaryColor: Color = Color(0xFF38BDF8),
-    isDark: Boolean = isSystemInDarkTheme()
+    isDark: Boolean = isSystemInDarkTheme(),
+    sliderWidth: androidx.compose.ui.unit.Dp = 74.dp,
+    sliderHeight: androidx.compose.ui.unit.Dp = 170.dp
 ) {
     val view = LocalView.current
     var heightPx by remember { mutableFloatStateOf(1f) }
@@ -112,15 +114,15 @@ fun VerticalLiquidGlassSlider(
                 scaleX = pressScale
                 scaleY = pressScale
             }
-            .width(82.dp)
-            .height(200.dp)
+            .width(sliderWidth)
+            .height(sliderHeight)
             .pureLiquidGlass(
-                shape = RoundedCornerShape(36.dp),
-                cornerRadius = 36.dp,
+                shape = RoundedCornerShape(32.dp),
+                cornerRadius = 32.dp,
                 refraction = 14f,
                 isDark = isDark
             )
-            .clip(RoundedCornerShape(36.dp))
+            .clip(RoundedCornerShape(32.dp))
             .onSizeChanged { heightPx = it.height.toFloat().coerceAtLeast(1f) }
             .pointerInput(valueRange) {
                 detectTapGestures { offset ->

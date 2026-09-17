@@ -18,7 +18,6 @@ package com.android.systemui.qs.ui.composable
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
@@ -30,7 +29,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -82,6 +80,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -92,12 +91,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.compose.modifiers.pureLiquidGlass
 import com.android.systemui.volume.panel.component.volume.ui.composable.VerticalLiquidGlassSlider
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
- * Next-Gen Flagship Modular Liquid Glass Control Center (Android 17 / iOS 26 Inspired).
+ * Next-Gen Flagship Modular Liquid Glass Control Center.
  *
  * Implements high-fluidity spring physics, dynamic radial glow blooms,
- * tactile haptic micro-ticks, dual vertical liquid cylinders, and interactive Bento grid modules.
+ * tactile haptic micro-ticks, dual vertical liquid cylinders, squircle Bento quick toggles,
+ * and interactive media equalizer card.
  */
 @Composable
 fun XephiraControlCenter(
@@ -112,85 +115,118 @@ fun XephiraControlCenter(
     var volumeValue by remember { mutableFloatStateOf(0.65f) }
 
     var wifiActive by remember { mutableStateOf(true) }
-    var dataActive by remember { mutableStateOf(true) }
     var bluetoothActive by remember { mutableStateOf(true) }
     var airplaneActive by remember { mutableStateOf(false) }
 
     var isPlaying by remember { mutableStateOf(true) }
     var mediaProgress by remember { mutableFloatStateOf(0.46f) }
 
+    // Center Matrix 2x4 States
     var flashlightActive by remember { mutableStateOf(false) }
-    var dndActive by remember { mutableStateOf(false) }
     var rotateActive by remember { mutableStateOf(true) }
     var hotspotActive by remember { mutableStateOf(false) }
-    var darkModeActive by remember { mutableStateOf(isDark) }
-    var recordActive by remember { mutableStateOf(false) }
+    var nightModeActive by remember { mutableStateOf(false) }
+    var dndActive by remember { mutableStateOf(false) }
+    var muteActive by remember { mutableStateOf(false) }
+    var batterySaverActive by remember { mutableStateOf(false) }
+
+    val currentTime = remember {
+        try {
+            val format = SimpleDateFormat("h:mm a", Locale.getDefault())
+            format.format(Date())
+        } catch (_: Exception) {
+            "10:14 PM"
+        }
+    }
+
+    val currentDate = remember {
+        try {
+            val format = SimpleDateFormat("EEE, MMM d", Locale.getDefault())
+            format.format(Date()).uppercase()
+        } catch (_: Exception) {
+            "TUE, OCT 26"
+        }
+    }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // ─── 1. TOP DUAL-SEGMENT PILL SWITCHER & QUICK STATUS ───────────────
+        // ─── 1. TOP HEADER: DIGITAL CLOCK & GLANCE PILLS ─────────────────────
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Segment Pill Switcher
-            Row(
-                modifier = Modifier
-                    .pureLiquidGlass(
-                        shape = RoundedCornerShape(20.dp),
-                        cornerRadius = 20.dp,
-                        refraction = 10f,
-                        isDark = isDark
-                    )
-                    .padding(3.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Control Center Active Pill
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(
-                            if (isDark) Color(0x35FFFFFF) else Color(0xFF0F172A)
-                        )
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = "Control Center",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-
-                // Notifications Switcher Pill
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .clickable {
-                            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                            onSwitchToNotifications?.invoke()
-                        }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = "Notifications",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (isDark) Color(0x99FFFFFF) else Color(0xFF64748B)
-                    )
-                }
+            // Clock & Date Stack
+            Column {
+                Text(
+                    text = currentTime,
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDark) Color.White else Color(0xFF0F172A),
+                    letterSpacing = (-0.5).sp
+                )
+                Text(
+                    text = currentDate,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isDark) Color(0xCCFFFFFF) else Color(0xFF64748B),
+                    letterSpacing = 0.5.sp
+                )
             }
 
-            // Status Bar Glance Pills (Battery + Settings)
+            // Status Bar Glance Pills (Switcher + Battery + Settings)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Segment Pill Switcher
+                Row(
+                    modifier = Modifier
+                        .pureLiquidGlass(
+                            shape = RoundedCornerShape(18.dp),
+                            cornerRadius = 18.dp,
+                            refraction = 10f,
+                            isDark = isDark
+                        )
+                        .padding(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (isDark) Color(0x35FFFFFF) else Color(0xFF0F172A))
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = "Control",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                onSwitchToNotifications?.invoke()
+                            }
+                            .padding(horizontal = 9.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = "Notifs",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = if (isDark) Color(0x99FFFFFF) else Color(0xFF64748B)
+                        )
+                    }
+                }
+
                 // Frosted Battery Pill
                 Row(
                     modifier = Modifier
@@ -200,15 +236,15 @@ fun XephiraControlCenter(
                             refraction = 8f,
                             isDark = isDark
                         )
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                        .padding(horizontal = 9.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .width(16.dp)
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(3.dp))
+                            .width(14.dp)
+                            .height(7.dp)
+                            .clip(RoundedCornerShape(2.dp))
                             .background(Color(0xFF10B981))
                     )
                     Text(
@@ -232,114 +268,337 @@ fun XephiraControlCenter(
             }
         }
 
-        // ─── 2. BENTO ROW 1: CONNECTIVITY HUB & MEDIA PLAYER ───────────────
+        // ─── 2. BENTO ROW 1: CONNECTIVITY (LEFT) & VERTICAL SLIDERS (RIGHT) ──
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // 2x2 Connectivity Hub Card
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(172.dp)
-                    .pureLiquidGlass(
-                        shape = RoundedCornerShape(26.dp),
-                        cornerRadius = 26.dp,
-                        refraction = 14f,
-                        isDark = isDark
-                    )
-                    .padding(14.dp)
+            // Left Column: Wi-Fi & Bluetooth Stacked Bento Cards
+            Column(
+                modifier = Modifier.weight(1.05f),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        BentoToggleIcon(
-                            icon = Icons.Filled.Wifi,
-                            label = "Wi-Fi",
-                            subLabel = if (wifiActive) "Xephira_5G" else "Off",
-                            isActive = wifiActive,
-                            activeColor = Color(0xFF0EA5E9),
-                            isDark = isDark,
-                            onClick = {
-                                wifiActive = !wifiActive
-                                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                            }
-                        )
-                        BentoToggleIcon(
-                            icon = Icons.Outlined.CellTower,
-                            label = "5G Data",
-                            subLabel = if (dataActive) "LTE+" else "Off",
-                            isActive = dataActive,
-                            activeColor = Color(0xFF10B981),
-                            isDark = isDark,
-                            onClick = {
-                                dataActive = !dataActive
-                                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                            }
-                        )
+                BentoConnectivityCard(
+                    title = "Wi-Fi",
+                    subtitle = if (wifiActive) "Xephira_5G" else "Off",
+                    icon = Icons.Filled.Wifi,
+                    isActive = wifiActive,
+                    activeColor = Color(0xFF0EA5E9),
+                    isDark = isDark,
+                    onClick = {
+                        wifiActive = !wifiActive
+                        view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                     }
+                )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        BentoToggleIcon(
-                            icon = Icons.Outlined.Bluetooth,
-                            label = "Bluetooth",
-                            subLabel = if (bluetoothActive) "Connected" else "Off",
-                            isActive = bluetoothActive,
-                            activeColor = Color(0xFF8B5CF6),
-                            isDark = isDark,
-                            onClick = {
-                                bluetoothActive = !bluetoothActive
-                                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                            }
-                        )
-                        BentoToggleIcon(
-                            icon = Icons.Outlined.AirplanemodeActive,
-                            label = "Airplane",
-                            subLabel = if (airplaneActive) "Active" else "Off",
-                            isActive = airplaneActive,
-                            activeColor = Color(0xFFF59E0B),
-                            isDark = isDark,
-                            onClick = {
-                                airplaneActive = !airplaneActive
-                                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                            }
-                        )
+                BentoConnectivityCard(
+                    title = "Bluetooth",
+                    subtitle = if (bluetoothActive) "Connected" else "Off",
+                    icon = Icons.Outlined.Bluetooth,
+                    isActive = bluetoothActive,
+                    activeColor = Color(0xFF8B5CF6),
+                    isDark = isDark,
+                    onClick = {
+                        bluetoothActive = !bluetoothActive
+                        view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                     }
-                }
+                )
             }
 
-            // 2x2 Now Playing Media Card
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(172.dp)
-                    .pureLiquidGlass(
-                        shape = RoundedCornerShape(26.dp),
-                        cornerRadius = 26.dp,
-                        refraction = 14f,
-                        isDark = isDark
-                    )
-                    .padding(14.dp)
+            // Right Column: Dual Vertical Liquid Glass Sliders
+            Row(
+                modifier = Modifier.weight(0.95f),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.SpaceBetween
+                // Brightness Slider
+                VerticalLiquidGlassSlider(
+                    value = brightnessValue,
+                    onValueChange = { brightnessValue = it },
+                    valueRange = 0f..1f,
+                    icon = Icons.Filled.BrightnessMedium,
+                    primaryColor = Color(0xFF38BDF8),
+                    isDark = isDark,
+                    sliderWidth = 68.dp,
+                    sliderHeight = 170.dp,
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Volume Slider
+                VerticalLiquidGlassSlider(
+                    value = volumeValue,
+                    onValueChange = { volumeValue = it },
+                    valueRange = 0f..1f,
+                    icon = Icons.Filled.VolumeUp,
+                    primaryColor = Color(0xFF8B5CF6),
+                    isDark = isDark,
+                    sliderWidth = 68.dp,
+                    sliderHeight = 170.dp,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // ─── 3. BENTO ROW 2: CENTER MATRIX (2x4 SQUIRCLE QUICK TOGGLES) ─────
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pureLiquidGlass(
+                    shape = RoundedCornerShape(26.dp),
+                    cornerRadius = 26.dp,
+                    refraction = 14f,
+                    isDark = isDark
+                )
+                .padding(horizontal = 10.dp, vertical = 14.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Row 1 (4 Toggles)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Title & Album Art Thumbnail
+                    CircularQuickToggle(
+                        icon = Icons.Filled.FlashlightOn,
+                        label = "Flashlight",
+                        isActive = flashlightActive,
+                        glowColor = Color(0xFFFBBF24),
+                        isDark = isDark,
+                        onClick = {
+                            flashlightActive = !flashlightActive
+                            view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                        }
+                    )
+
+                    CircularQuickToggle(
+                        icon = Icons.Outlined.AirplanemodeActive,
+                        label = "Airplane",
+                        isActive = airplaneActive,
+                        glowColor = Color(0xFFF59E0B),
+                        isDark = isDark,
+                        onClick = {
+                            airplaneActive = !airplaneActive
+                            view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                        }
+                    )
+
+                    CircularQuickToggle(
+                        icon = Icons.Filled.ScreenRotation,
+                        label = "Rotate",
+                        isActive = rotateActive,
+                        glowColor = Color(0xFF06B6D4),
+                        isDark = isDark,
+                        onClick = {
+                            rotateActive = !rotateActive
+                            view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                        }
+                    )
+
+                    CircularQuickToggle(
+                        label = "Hotspot",
+                        isActive = hotspotActive,
+                        glowColor = Color(0xFF10B981),
+                        isDark = isDark,
+                        onClick = {
+                            hotspotActive = !hotspotActive
+                            view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                        },
+                        customIcon = {
+                            Canvas(modifier = Modifier.size(20.dp)) {
+                                val tint = if (hotspotActive) Color(0xFF10B981) else (if (isDark) Color.White else Color(0xFF0F172A))
+                                val c = Offset(size.width / 2f, size.height * 0.72f)
+                                drawCircle(color = tint, radius = 2.4f, center = c)
+                                drawArc(
+                                    color = tint,
+                                    startAngle = 210f,
+                                    sweepAngle = 120f,
+                                    useCenter = false,
+                                    topLeft = Offset(c.x - 5.5f, c.y - 5.5f),
+                                    size = Size(11f, 11f),
+                                    style = Stroke(width = 1.6f)
+                                )
+                                drawArc(
+                                    color = tint,
+                                    startAngle = 205f,
+                                    sweepAngle = 130f,
+                                    useCenter = false,
+                                    topLeft = Offset(c.x - 9.5f, c.y - 9.5f),
+                                    size = Size(19f, 19f),
+                                    style = Stroke(width = 1.6f)
+                                )
+                            }
+                        }
+                    )
+                }
+
+                // Row 2 (4 Toggles)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularQuickToggle(
+                        icon = Icons.Filled.Nightlight,
+                        label = "Night Light",
+                        isActive = nightModeActive,
+                        glowColor = Color(0xFF6366F1),
+                        isDark = isDark,
+                        onClick = {
+                            nightModeActive = !nightModeActive
+                            view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                        }
+                    )
+
+                    CircularQuickToggle(
+                        label = "DND",
+                        isActive = dndActive,
+                        glowColor = Color(0xFFA855F7),
+                        isDark = isDark,
+                        onClick = {
+                            dndActive = !dndActive
+                            view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                        },
+                        customIcon = {
+                            Canvas(modifier = Modifier.size(20.dp)) {
+                                val tint = if (dndActive) Color(0xFFA855F7) else (if (isDark) Color.White else Color(0xFF0F172A))
+                                drawCircle(color = tint, radius = size.minDimension / 2f - 1.5f, style = Stroke(width = 1.8f))
+                                drawLine(
+                                    color = tint,
+                                    start = Offset(size.width * 0.28f, size.height * 0.5f),
+                                    end = Offset(size.width * 0.72f, size.height * 0.5f),
+                                    strokeWidth = 2.2f
+                                )
+                            }
+                        }
+                    )
+
+                    CircularQuickToggle(
+                        label = "Mute",
+                        isActive = muteActive,
+                        glowColor = Color(0xFFF43F5E),
+                        isDark = isDark,
+                        onClick = {
+                            muteActive = !muteActive
+                            view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                        },
+                        customIcon = {
+                            Canvas(modifier = Modifier.size(20.dp)) {
+                                val tint = if (muteActive) Color(0xFFF43F5E) else (if (isDark) Color.White else Color(0xFF0F172A))
+                                val p = Path().apply {
+                                    moveTo(size.width * 0.2f, size.height * 0.35f)
+                                    lineTo(size.width * 0.38f, size.height * 0.35f)
+                                    lineTo(size.width * 0.62f, size.height * 0.18f)
+                                    lineTo(size.width * 0.62f, size.height * 0.82f)
+                                    lineTo(size.width * 0.38f, size.height * 0.65f)
+                                    lineTo(size.width * 0.2f, size.height * 0.65f)
+                                    close()
+                                }
+                                drawPath(p, color = tint, style = Stroke(width = 1.6f))
+                                if (muteActive) {
+                                    drawLine(
+                                        color = tint,
+                                        start = Offset(size.width * 0.7f, size.height * 0.35f),
+                                        end = Offset(size.width * 0.88f, size.height * 0.65f),
+                                        strokeWidth = 2f
+                                    )
+                                    drawLine(
+                                        color = tint,
+                                        start = Offset(size.width * 0.88f, size.height * 0.35f),
+                                        end = Offset(size.width * 0.7f, size.height * 0.65f),
+                                        strokeWidth = 2f
+                                    )
+                                }
+                            }
+                        }
+                    )
+
+                    CircularQuickToggle(
+                        label = "Saver",
+                        isActive = batterySaverActive,
+                        glowColor = Color(0xFF22C55E),
+                        isDark = isDark,
+                        onClick = {
+                            batterySaverActive = !batterySaverActive
+                            view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                        },
+                        customIcon = {
+                            Canvas(modifier = Modifier.size(20.dp)) {
+                                val tint = if (batterySaverActive) Color(0xFF22C55E) else (if (isDark) Color.White else Color(0xFF0F172A))
+                                val bodyW = size.width * 0.52f
+                                val bodyH = size.height * 0.72f
+                                val left = (size.width - bodyW) / 2f
+                                val top = (size.height - bodyH) / 2f + 1f
+                                drawRoundRect(
+                                    color = tint,
+                                    topLeft = Offset(left, top),
+                                    size = Size(bodyW, bodyH),
+                                    cornerRadius = CornerRadius(2.5f, 2.5f),
+                                    style = Stroke(width = 1.6f)
+                                )
+                                drawRoundRect(
+                                    color = tint,
+                                    topLeft = Offset(size.width * 0.42f, top - 2.5f),
+                                    size = Size(size.width * 0.16f, 2.5f),
+                                    cornerRadius = CornerRadius(1f, 1f)
+                                )
+                                if (batterySaverActive) {
+                                    drawLine(color = tint, start = Offset(size.width * 0.5f, top + 3f), end = Offset(size.width * 0.5f, top + bodyH - 3f), strokeWidth = 1.6f)
+                                    drawLine(color = tint, start = Offset(left + 3f, top + bodyH * 0.5f), end = Offset(left + bodyW - 3f, top + bodyH * 0.5f), strokeWidth = 1.6f)
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        // ─── 4. BENTO ROW 3: FROSTED MEDIA PLAYER CARD ───────────────────────
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pureLiquidGlass(
+                    shape = RoundedCornerShape(26.dp),
+                    cornerRadius = 26.dp,
+                    refraction = 14f,
+                    isDark = isDark
+                )
+                .padding(14.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Track Info & Mini Waveform Equalizer
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFF8B5CF6).copy(alpha = 0.35f),
+                            border = BorderStroke(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.6f)),
+                            modifier = Modifier.size(38.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Filled.GraphicEq,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
+                        Column {
                             Text(
                                 text = "Midnight Echo",
                                 fontSize = 13.sp,
@@ -354,264 +613,101 @@ fun XephiraControlCenter(
                                 maxLines = 1
                             )
                         }
-
-                        // Mini album art glowing square
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = Color(0xFF8B5CF6).copy(alpha = 0.35f),
-                            border = BorderStroke(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.6f)),
-                            modifier = Modifier.size(34.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Filled.GraphicEq,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
                     }
 
-                    // Live Soundwave Equalizer Visualizer
-                    BentoMiniWaveform(isPlaying = isPlaying, isDark = isDark)
+                    // Live Soundwave Equalizer
+                    Box(modifier = Modifier.width(90.dp)) {
+                        BentoMiniWaveform(isPlaying = isPlaying, isDark = isDark)
+                    }
+                }
 
-                    // Timeline Scrubber Bar
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                // Timeline Scrubber Bar
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(if (isDark) Color(0x22FFFFFF) else Color(0x14000000))
+                            .clickable {
+                                mediaProgress = (mediaProgress + 0.15f) % 1f
+                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            }
+                    ) {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .fillMaxWidth(mediaProgress)
                                 .height(4.dp)
                                 .clip(RoundedCornerShape(2.dp))
-                                .background(if (isDark) Color(0x22FFFFFF) else Color(0x14000000))
-                                .clickable {
-                                    mediaProgress = (mediaProgress + 0.15f) % 1f
-                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                }
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth(mediaProgress)
-                                    .height(4.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(
-                                        Brush.horizontalGradient(
-                                            listOf(Color(0xFF38BDF8), Color(0xFF8B5CF6))
-                                        )
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(Color(0xFF38BDF8), Color(0xFF8B5CF6))
                                     )
+                                )
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "1:42", fontSize = 9.sp, color = if (isDark) Color(0x66FFFFFF) else Color(0xFF94A3B8))
+                        Text(text = "3:30", fontSize = 9.sp, color = if (isDark) Color(0x66FFFFFF) else Color(0xFF94A3B8))
+                    }
+                }
+
+                // Playback Controls
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LiquidPressableIcon(
+                        icon = Icons.Filled.FastRewind,
+                        onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                        },
+                        tint = if (isDark) Color.White else Color(0xFF0F172A),
+                        size = 20.dp
+                    )
+
+                    // Play/Pause Circular Morphing Pill
+                    Surface(
+                        shape = CircleShape,
+                        color = if (isDark) Color.White else Color(0xFF0F172A),
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clickable {
+                                isPlaying = !isPlaying
+                                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                            }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                tint = if (isDark) Color(0xFF0F172A) else Color.White,
+                                modifier = Modifier.size(20.dp)
                             )
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(text = "1:42", fontSize = 9.sp, color = if (isDark) Color(0x66FFFFFF) else Color(0xFF94A3B8))
-                            Text(text = "3:30", fontSize = 9.sp, color = if (isDark) Color(0x66FFFFFF) else Color(0xFF94A3B8))
                         }
                     }
 
-                    // Playback Controls
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        LiquidPressableIcon(
-                            icon = Icons.Filled.FastRewind,
-                            onClick = {
-                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                            },
-                            tint = if (isDark) Color.White else Color(0xFF0F172A),
-                            size = 20.dp
-                        )
-                        // Play/Pause Morphing Button
-                        Surface(
-                            shape = CircleShape,
-                            color = if (isDark) Color.White else Color(0xFF0F172A),
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clickable {
-                                    isPlaying = !isPlaying
-                                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                                }
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                    contentDescription = if (isPlaying) "Pause" else "Play",
-                                    tint = if (isDark) Color(0xFF0F172A) else Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                        LiquidPressableIcon(
-                            icon = Icons.Filled.FastForward,
-                            onClick = {
-                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                            },
-                            tint = if (isDark) Color.White else Color(0xFF0F172A),
-                            size = 20.dp
-                        )
-                    }
+                    LiquidPressableIcon(
+                        icon = Icons.Filled.FastForward,
+                        onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                        },
+                        tint = if (isDark) Color.White else Color(0xFF0F172A),
+                        size = 20.dp
+                    )
                 }
             }
         }
 
-        // ─── 3. BENTO ROW 2: DUAL VERTICAL FLUID SLIDERS ───────────────────
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                // Brightness Vertical Tube
-                VerticalLiquidGlassSlider(
-                    value = brightnessValue,
-                    onValueChange = { brightnessValue = it },
-                    valueRange = 0f..1f,
-                    icon = Icons.Filled.BrightnessMedium,
-                    primaryColor = Color(0xFF38BDF8),
-                    isDark = isDark
-                )
-
-                // Volume Vertical Tube
-                VerticalLiquidGlassSlider(
-                    value = volumeValue,
-                    onValueChange = { volumeValue = it },
-                    valueRange = 0f..1f,
-                    icon = Icons.Filled.VolumeUp,
-                    primaryColor = Color(0xFF8B5CF6),
-                    isDark = isDark
-                )
-            }
-        }
-
-        // ─── 4. BENTO ROW 3: CIRCULAR QUICK TOGGLES (6-ITEM MATRIX) ────────
+        // ─── 5. BOTTOM FROSTED DRAG HANDLE ───────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .pureLiquidGlass(
-                    shape = RoundedCornerShape(26.dp),
-                    cornerRadius = 26.dp,
-                    refraction = 14f,
-                    isDark = isDark
-                )
-                .padding(14.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                CircularQuickToggle(
-                    icon = Icons.Filled.FlashlightOn,
-                    label = "Flashlight",
-                    isActive = flashlightActive,
-                    glowColor = Color(0xFFFBBF24), // Amber
-                    isDark = isDark,
-                    onClick = {
-                        flashlightActive = !flashlightActive
-                        view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                    }
-                )
-
-                CircularQuickToggle(
-                    icon = Icons.Filled.Nightlight,
-                    label = "DND",
-                    isActive = dndActive,
-                    glowColor = Color(0xFFA855F7), // Purple
-                    isDark = isDark,
-                    onClick = {
-                        dndActive = !dndActive
-                        view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                    }
-                )
-
-                CircularQuickToggle(
-                    icon = Icons.Filled.ScreenRotation,
-                    label = "Rotate",
-                    isActive = rotateActive,
-                    glowColor = Color(0xFF06B6D4), // Cyan
-                    isDark = isDark,
-                    onClick = {
-                        rotateActive = !rotateActive
-                        view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                    }
-                )
-
-                CircularQuickToggle(
-                    label = "Hotspot",
-                    isActive = hotspotActive,
-                    glowColor = Color(0xFF10B981), // Emerald
-                    isDark = isDark,
-                    onClick = {
-                        hotspotActive = !hotspotActive
-                        view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                    },
-                    customIcon = {
-                        Canvas(modifier = Modifier.size(20.dp)) {
-                            val tint = if (hotspotActive) Color(0xFF10B981) else (if (isDark) Color.White else Color(0xFF0F172A))
-                            val c = Offset(size.width / 2f, size.height * 0.72f)
-                            // Central beacon dot
-                            drawCircle(
-                                color = tint,
-                                radius = 2.4f,
-                                center = c
-                            )
-                            // Inner signal wave
-                            drawArc(
-                                color = tint,
-                                startAngle = 210f,
-                                sweepAngle = 120f,
-                                useCenter = false,
-                                topLeft = Offset(c.x - 5.5f, c.y - 5.5f),
-                                size = Size(11f, 11f),
-                                style = Stroke(width = 1.6f)
-                            )
-                            // Outer signal wave
-                            drawArc(
-                                color = tint,
-                                startAngle = 205f,
-                                sweepAngle = 130f,
-                                useCenter = false,
-                                topLeft = Offset(c.x - 9.5f, c.y - 9.5f),
-                                size = Size(19f, 19f),
-                                style = Stroke(width = 1.6f)
-                            )
-                        }
-                    }
-                )
-
-                CircularQuickToggle(
-                    icon = Icons.Filled.DarkMode,
-                    label = "Theme",
-                    isActive = darkModeActive,
-                    glowColor = Color(0xFF6366F1), // Indigo
-                    isDark = isDark,
-                    onClick = {
-                        darkModeActive = !darkModeActive
-                        view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                    }
-                )
-
-                CircularQuickToggle(
-                    icon = Icons.Filled.Videocam,
-                    label = "Record",
-                    isActive = recordActive,
-                    glowColor = Color(0xFFEF4444), // Crimson
-                    isDark = isDark,
-                    onClick = {
-                        recordActive = !recordActive
-                        view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                    }
-                )
-            }
-        }
-
-        // ─── 5. BOTTOM FROSTED DRAG HANDLE ─────────────────────────────────
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
+                .padding(top = 2.dp),
             contentAlignment = Alignment.Center
         ) {
             Box(
@@ -626,13 +722,13 @@ fun XephiraControlCenter(
 }
 
 /**
- * Bento Toggle Icon with tactile spring press physics and radial glow aura.
+ * Bento Connectivity Card with glowing aura and tactile spring response.
  */
 @Composable
-private fun BentoToggleIcon(
+private fun BentoConnectivityCard(
+    title: String,
+    subtitle: String,
     icon: ImageVector,
-    label: String,
-    subLabel: String = "",
     isActive: Boolean,
     activeColor: Color,
     isDark: Boolean,
@@ -640,76 +736,100 @@ private fun BentoToggleIcon(
 ) {
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.93f else 1.0f,
+        targetValue = if (isPressed) 0.95f else 1.0f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-        label = "bento_press"
+        label = "bento_card_press"
     )
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-        }
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.size(52.dp)
-        ) {
-            // Dynamic Radial Glow Bloom
-            if (isActive) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(activeColor.copy(alpha = 0.5f), Color.Transparent)
-                            )
-                        )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .pureLiquidGlass(
+                shape = RoundedCornerShape(22.dp),
+                cornerRadius = 22.dp,
+                refraction = 12f,
+                isDark = isDark
+            )
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        isPressed = true
+                        tryAwaitRelease()
+                        isPressed = false
+                    },
+                    onTap = { onClick() }
                 )
             }
-
-            Surface(
-                shape = CircleShape,
-                color = if (isActive) activeColor else (if (isDark) Color(0x22FFFFFF) else Color(0x14000000)),
-                border = if (isActive) BorderStroke(1.2.dp, Color.White.copy(alpha = 0.7f)) else null,
-                modifier = Modifier
-                    .size(50.dp)
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onPress = {
-                                isPressed = true
-                                tryAwaitRelease()
-                                isPressed = false
-                            },
-                            onTap = { onClick() }
-                        )
-                    }
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(46.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = label,
-                        tint = if (isActive) Color.White else (if (isDark) Color.White else Color(0xFF0F172A)),
-                        modifier = Modifier.size(22.dp)
+                if (isActive) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.radialGradient(
+                                    colors = listOf(activeColor.copy(alpha = 0.5f), Color.Transparent)
+                                )
+                            )
                     )
                 }
+                Surface(
+                    shape = CircleShape,
+                    color = if (isActive) activeColor else (if (isDark) Color(0x22FFFFFF) else Color(0x14000000)),
+                    border = if (isActive) BorderStroke(1.2.dp, Color.White.copy(alpha = 0.8f)) else BorderStroke(1.dp, Color(0x20FFFFFF)),
+                    modifier = Modifier.size(42.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = title,
+                            tint = if (isActive) Color.White else (if (isDark) Color.White else Color(0xFF0F172A)),
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDark) Color.White else Color(0xFF0F172A),
+                    maxLines = 1
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (isActive) activeColor else (if (isDark) Color(0x99FFFFFF) else Color(0xFF64748B)),
+                    maxLines = 1
+                )
             }
         }
-
-        Text(
-            text = label,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = if (isDark) Color.White else Color(0xFF0F172A)
-        )
     }
 }
 
 /**
- * Circular Quick Toggle with tactile spring scaling, glowing stroke, and label.
+ * Squircle Quick Toggle with tactile spring scaling, specular border, and label.
  */
 @Composable
 private fun CircularQuickToggle(
@@ -737,11 +857,11 @@ private fun CircularQuickToggle(
         }
     ) {
         Surface(
-            shape = CircleShape,
+            shape = RoundedCornerShape(18.dp),
             color = if (isActive) glowColor.copy(alpha = 0.28f) else (if (isDark) Color(0x20FFFFFF) else Color(0x12000000)),
-            border = if (isActive) BorderStroke(1.8.dp, glowColor) else BorderStroke(1.dp, if (isDark) Color(0x25FFFFFF) else Color(0x10000000)),
+            border = if (isActive) BorderStroke(1.6.dp, glowColor) else BorderStroke(1.dp, if (isDark) Color(0x25FFFFFF) else Color(0x10000000)),
             modifier = Modifier
-                .size(46.dp)
+                .size(48.dp)
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
@@ -761,7 +881,7 @@ private fun CircularQuickToggle(
                         imageVector = icon,
                         contentDescription = label,
                         tint = if (isActive) glowColor else (if (isDark) Color.White else Color(0xFF0F172A)),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(21.dp)
                     )
                 }
             }
@@ -769,9 +889,9 @@ private fun CircularQuickToggle(
 
         Text(
             text = label,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Medium,
-            color = if (isDark) Color(0xB3FFFFFF) else Color(0xFF64748B)
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (isActive) (if (isDark) Color.White else Color(0xFF0F172A)) else (if (isDark) Color(0xB3FFFFFF) else Color(0xFF64748B))
         )
     }
 }

@@ -80,6 +80,7 @@ import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.media.remedia.ui.compose.Media
 import com.android.systemui.media.remedia.ui.compose.MediaPresentationStyle
 import com.android.systemui.notifications.ui.composable.NotificationScrollingStack
+import com.android.systemui.notifications.ui.composable.XephiraNotificationPanel
 import com.android.systemui.qs.composefragment.ui.GridAnchor
 import com.android.systemui.qs.footer.ui.compose.FooterActionsWithAnimatedVisibility
 import com.android.systemui.qs.panels.ui.compose.EditMode
@@ -339,22 +340,29 @@ private fun ContentScope.SingleShade(
                     mediaInRow = mediaInRow,
                 )
 
-                NotificationScrollingStack(
-                    shadeSession = shadeSession,
-                    stackScrollView = notificationStackScrollView,
-                    viewModel = notificationsPlaceholderViewModel,
-                    jankMonitor = jankMonitor,
-                    maxScrimTop = { maxNotifScrimTop.toFloat() },
-                    shouldPunchHoleBehindScrim = shouldPunchHoleBehindScrim,
-                    stackTopPadding = notificationStackPadding,
-                    stackBottomPadding = navBarHeight,
-                    supportNestedScrolling = true,
-                    onEmptySpaceClick =
-                        viewModel::onEmptySpaceClicked.takeIf { viewModel.isEmptySpaceClickable },
+                Box(
                     modifier =
                         Modifier.layoutId(SingleShadeMeasurePolicy.LayoutId.Notifications)
-                            .padding(horizontal = shadeHorizontalPadding),
-                )
+                            .padding(horizontal = shadeHorizontalPadding)
+                ) {
+                    XephiraNotificationPanel(
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    NotificationScrollingStack(
+                        shadeSession = shadeSession,
+                        stackScrollView = notificationStackScrollView,
+                        viewModel = notificationsPlaceholderViewModel,
+                        jankMonitor = jankMonitor,
+                        maxScrimTop = { maxNotifScrimTop.toFloat() },
+                        shouldPunchHoleBehindScrim = false,
+                        stackTopPadding = notificationStackPadding,
+                        stackBottomPadding = navBarHeight,
+                        supportNestedScrolling = true,
+                        onEmptySpaceClick =
+                            viewModel::onEmptySpaceClicked.takeIf { viewModel.isEmptySpaceClickable },
+                        modifier = Modifier.graphicsLayer { alpha = 0f },
+                    )
+                }
             },
             measurePolicy = shadeMeasurePolicy,
         )
@@ -538,18 +546,7 @@ private fun ContentScope.SplitShade(
                     }
                 }
 
-                NotificationScrollingStack(
-                    shadeSession = shadeSession,
-                    stackScrollView = notificationStackScrollView,
-                    viewModel = notificationsPlaceholderViewModel,
-                    jankMonitor = jankMonitor,
-                    maxScrimTop = { 0f },
-                    stackTopPadding = notificationStackPadding,
-                    stackBottomPadding = notificationStackPadding,
-                    shouldPunchHoleBehindScrim = false,
-                    supportNestedScrolling = false,
-                    onEmptySpaceClick =
-                        viewModel::onEmptySpaceClicked.takeIf { viewModel.isEmptySpaceClickable },
+                Box(
                     modifier =
                         Modifier.weight(weight = 1f)
                             .fillMaxHeight()
@@ -557,8 +554,26 @@ private fun ContentScope.SplitShade(
                                 end =
                                     dimensionResource(R.dimen.notification_panel_margin_horizontal),
                                 bottom = navBarBottomHeight,
-                            ),
-                )
+                            )
+                ) {
+                    XephiraNotificationPanel(
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    NotificationScrollingStack(
+                        shadeSession = shadeSession,
+                        stackScrollView = notificationStackScrollView,
+                        viewModel = notificationsPlaceholderViewModel,
+                        jankMonitor = jankMonitor,
+                        maxScrimTop = { 0f },
+                        stackTopPadding = notificationStackPadding,
+                        stackBottomPadding = notificationStackPadding,
+                        shouldPunchHoleBehindScrim = false,
+                        supportNestedScrolling = false,
+                        onEmptySpaceClick =
+                            viewModel::onEmptySpaceClicked.takeIf { viewModel.isEmptySpaceClickable },
+                        modifier = Modifier.graphicsLayer { alpha = 0f },
+                    )
+                }
             }
         }
     }

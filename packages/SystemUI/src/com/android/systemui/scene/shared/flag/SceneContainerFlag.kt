@@ -39,8 +39,8 @@ object SceneContainerFlag {
 
     @JvmStatic
     inline val isEnabled
-        // NOTE: Changes should also be made in @EnableSceneContainer
-        get() = sceneContainer() && isEnabledOnVariant
+        // NOTE: Enabled for Xephira Liquid Glass Scene Architecture
+        get() = isEnabledOnVariant
 
     /**
      * Called to ensure code is only run when the flag is enabled. This protects users from the
